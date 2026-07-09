@@ -1,0 +1,63 @@
+export const TIMING = {
+  with_meal: { label: "With a meal", color: "#7A9B76" },
+  empty_stomach: { label: "Empty stomach", color: "#6E8FA6" },
+  either: { label: "Anytime", color: "#B57EDC" },
+  bedtime: { label: "Before bed", color: "#8A6FB0" },
+};
+
+export const FALLBACK_NUTRIENTS = [
+  { id: "vitA", name: "Vitamin A", unit: "mcg", ul: 3000, timing: "with_meal", reason: "Fat-soluble — needs dietary fat alongside it to absorb well.", synonyms: ["vitamin a", "retinol"] },
+  { id: "vitC", name: "Vitamin C", unit: "mg", ul: 2000, timing: "either", reason: "Water-soluble; food doesn't change absorption much, but may ease it on a sensitive stomach.", synonyms: ["vitamin c", "ascorbic acid"] },
+  { id: "vitD", name: "Vitamin D", unit: "IU", ul: 4000, timing: "with_meal", reason: "Fat-soluble — absorption improves significantly when taken with a meal containing fat.", synonyms: ["vitamin d3", "vitamin d2", "vitamin d", "cholecalciferol"] },
+  { id: "vitE", name: "Vitamin E", unit: "mg", ul: 1000, timing: "with_meal", reason: "Fat-soluble — needs dietary fat to be absorbed effectively.", synonyms: ["vitamin e", "tocopherol"] },
+  { id: "vitK", name: "Vitamin K", unit: "mcg", ul: null, timing: "with_meal", reason: "Fat-soluble — best absorbed alongside a meal with some fat.", synonyms: ["vitamin k"] },
+  { id: "b1", name: "Vitamin B1 (Thiamin)", unit: "mg", ul: null, timing: "with_meal", reason: "Can cause mild nausea on an empty stomach for some people.", synonyms: ["thiamin", "vitamin b1"] },
+  { id: "b2", name: "Vitamin B2 (Riboflavin)", unit: "mg", ul: null, timing: "with_meal", reason: "Gentler on the stomach when taken with food.", synonyms: ["riboflavin", "vitamin b2"] },
+  { id: "b3", name: "Vitamin B3 (Niacin)", unit: "mg", ul: 35, timing: "with_meal", reason: "Food blunts the harmless but uncomfortable 'niacin flush' skin reaction.", synonyms: ["niacin", "vitamin b3"] },
+  { id: "b6", name: "Vitamin B6", unit: "mg", ul: 100, timing: "with_meal", reason: "Reduces the chance of stomach upset at higher doses.", synonyms: ["vitamin b6", "pyridoxine"] },
+  { id: "folate", name: "Folate", unit: "mcg", ul: 1000, timing: "either", reason: "Water-soluble; absorbed well with or without food.", synonyms: ["folate", "folic acid"] },
+  { id: "b12", name: "Vitamin B12", unit: "mcg", ul: null, timing: "empty_stomach", reason: "Absorption is somewhat better on an empty stomach, though it's still fine with food.", synonyms: ["vitamin b12", "cobalamin", "cyanocobalamin", "methylcobalamin"] },
+  { id: "biotin", name: "Biotin", unit: "mcg", ul: null, timing: "either", reason: "Water-soluble; timing relative to food doesn't matter much.", synonyms: ["biotin"] },
+  { id: "calcium", name: "Calcium", unit: "mg", ul: 2500, timing: "with_meal", reason: "Stomach acid from eating helps absorb it; also best split from iron and zinc doses.", synonyms: ["calcium"] },
+  { id: "iron", name: "Iron", unit: "mg", ul: 45, timing: "empty_stomach", reason: "Absorbs best without food, but take with a little food if it upsets your stomach — just avoid calcium, coffee, or tea nearby.", synonyms: ["iron", "ferrous"] },
+  { id: "magnesium", name: "Magnesium", unit: "mg", ul: 350, timing: "with_meal", reason: "Food reduces the loose-stool effect it can have on an empty stomach.", synonyms: ["magnesium"] },
+  { id: "zinc", name: "Zinc", unit: "mg", ul: 40, timing: "with_meal", reason: "Can cause nausea on an empty stomach; also competes with calcium and iron for absorption.", synonyms: ["zinc"] },
+  { id: "copper", name: "Copper", unit: "mg", ul: 10, timing: "with_meal", reason: "Best taken with food to avoid stomach irritation.", synonyms: ["copper"] },
+  { id: "selenium", name: "Selenium", unit: "mcg", ul: 400, timing: "with_meal", reason: "Taking it with food reduces mild GI irritation.", synonyms: ["selenium"] },
+  { id: "potassium", name: "Potassium", unit: "mg", ul: null, timing: "with_meal", reason: "Food buffers the stomach against irritation from potassium salts.", synonyms: ["potassium"] },
+  { id: "omega3", name: "Omega-3 (fish oil)", unit: "mg", ul: null, timing: "with_meal", reason: "Fat-soluble and better absorbed with dietary fat; also cuts down on 'fish burps'.", synonyms: ["omega-3", "omega 3", "fish oil", "epa", "dha"] },
+  { id: "melatonin", name: "Melatonin", unit: "mg", ul: null, timing: "bedtime", reason: "Timed to your sleep window, roughly 30–60 minutes before bed, ideally without a heavy meal.", synonyms: ["melatonin"] },
+  { id: "ashwagandha", name: "Ashwagandha", unit: "mg", ul: null, timing: "with_meal", reason: "Food helps prevent the mild stomach upset it can cause on its own.", synonyms: ["ashwagandha"] },
+  { id: "creatine", name: "Creatine", unit: "g", ul: null, timing: "either", reason: "Timing relative to food doesn't meaningfully affect it — consistency day to day matters more.", synonyms: ["creatine"] },
+  { id: "caffeine", name: "Caffeine", unit: "mg", ul: 400, timing: "either", reason: "Fine with or without food, but food can soften the jitters and stomach acidity for sensitive users.", synonyms: ["caffeine"] },
+];
+
+export const FALLBACK_BRANDS = [
+  { id: "b1", label: "Nature Made Multi for Him", items: [["vitA", 900], ["vitC", 90], ["vitD", 1000], ["vitE", 20], ["b6", 2], ["folate", 400], ["b12", 6], ["zinc", 11], ["selenium", 55]] },
+  { id: "b2", label: "Centrum Silver Adults 50+", items: [["vitA", 700], ["vitC", 85], ["vitD", 1000], ["vitE", 30], ["b6", 3], ["b12", 25], ["calcium", 220], ["magnesium", 100], ["zinc", 11], ["copper", 0.5]] },
+  { id: "b3", label: "Nature's Bounty Vitamin D3 2000 IU", items: [["vitD", 2000]] },
+  { id: "b4", label: "NOW Foods Magnesium Citrate 200mg", items: [["magnesium", 200]] },
+  { id: "b5", label: "Garden of Life Vitamin C 1000mg", items: [["vitC", 1000]] },
+  { id: "b6b", label: "Nordic Naturals Ultimate Omega", items: [["omega3", 1280]] },
+  { id: "b7", label: "Solgar Vitamin B12 1000mcg", items: [["b12", 1000]] },
+  { id: "b8", label: "Nature Made Iron 65mg", items: [["iron", 65]] },
+  { id: "b9", label: "Thorne Zinc Picolinate 15mg", items: [["zinc", 15]] },
+  { id: "b10", label: "NOW Ashwagandha 450mg", items: [["ashwagandha", 450]] },
+  { id: "b11", label: "Nature Made Melatonin 5mg", items: [["melatonin", 5]] },
+  { id: "b12b", label: "Optimum Nutrition Creatine Monohydrate", items: [["creatine", 5]] },
+  { id: "b13", label: "Nature Made Calcium 600mg + D3", items: [["calcium", 600], ["vitD", 800]] },
+  { id: "b14", label: "Life Extension Selenium 200mcg", items: [["selenium", 200]] },
+  { id: "b15", label: "Kirkland Signature Fish Oil", items: [["omega3", 400]] },
+].map((b) => ({ ...b, items: b.items.map(([nutrientId, amount]) => ({ nutrientId, amount })) }));
+
+export const FALLBACK_INTERACTIONS = [
+  { pair: ["calcium", "iron"], type: "caution", note: "Calcium can block iron absorption — space these at least 2 hours apart." },
+  { pair: ["zinc", "iron"], type: "caution", note: "Zinc and iron compete for the same absorption pathway — space them apart if doses are high." },
+  { pair: ["calcium", "zinc"], type: "caution", note: "High-dose calcium can reduce how much zinc your body absorbs." },
+  { pair: ["zinc", "copper"], type: "caution", note: "Ongoing high-dose zinc can deplete copper over time — many multivitamins balance the two intentionally." },
+  { pair: ["calcium", "magnesium"], type: "caution", note: "Very high doses of either can compete for absorption, though typical doses together are usually fine." },
+  { pair: ["vitE", "vitK"], type: "caution", note: "High-dose vitamin E can interfere with vitamin K's role in blood clotting." },
+  { pair: ["melatonin", "caffeine"], type: "caution", note: "Caffeine can counteract melatonin's effect on sleep — best not to take close together." },
+  { pair: ["vitC", "iron"], type: "helpful", note: "Vitamin C actually improves iron absorption — a genuinely useful pairing, not a conflict." },
+  { pair: ["magnesium", "vitD"], type: "helpful", note: "Magnesium helps activate vitamin D in the body — a supportive pairing." },
+];
