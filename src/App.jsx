@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Plus, X, AlertTriangle, CheckCircle2, Trash2, Pill, Camera, Search, Loader2, Info, Cloud, CloudOff, Image, Send, History } from "lucide-react";
+import { Plus, X, AlertTriangle, CheckCircle2, Trash2, Pill, Camera, Search, Loader2, Info, Cloud, CloudOff, Image, Send, History, Lock } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import { TIMING, FALLBACK_NUTRIENTS, FALLBACK_BRANDS, FALLBACK_INTERACTIONS } from "./data";
 import { addSearchHistory, getRecentSearches } from "./history";
@@ -20,6 +20,7 @@ function emptySupplement(defaultNutrientId) {
     cap: nextCap(),
     rows: [emptyRow(defaultNutrientId)],
     brandQuery: "",
+    locked: false,
     ocr: { status: "idle", text: "" },
     submission: { status: "idle", photoFile: null, photoPreview: null },
   };
@@ -47,6 +48,7 @@ export default function App() {
   const [dataSource, setDataSource] = useState("local"); // 'local' | 'supabase'
   const [syncStatus, setSyncStatus] = useState(supabase ? "connecting" : "offline"); // connecting | synced | offline | error
   const [userId, setUserId] = useState(null);
+  const [age, setAge] = useState("");
   const [supplements, setSupplements] = useState(() => [emptySupplement(FALLBACK_NUTRIENTS[0].id)]);
   const [loaded, setLoaded] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
@@ -63,6 +65,14 @@ export default function App() {
   }, [refreshHistory]);
 
   const nutrientMeta = useCallback((id) => nutrients.find((n) => n.id === id), [nutrients]);
+  const effectiveUL = useCallback(
+    (meta) => {
+      const ageNum = parseInt(age, 10);
+      if (meta?.ulOver50 != null && !isNaN(ageNum) && ageNum >= 51) return meta.ulOver50;
+      return meta?.ul ?? null;
+    },
+    [age]
+  );
 
   // ---- Load reference data + user's saved stack from Supabase on mount ----
   useEffect(() => {
@@ -83,7 +93,7 @@ export default function App() {
         if (nutErr) throw nutErr;
 
         if (nutRows?.length) {
-          setNutrients(nutRows);
+          setNutrients(nutRows.map((n) => ({ ...n, ulOver50: n.ul_over_50 })));
           const brandsWithItems = (brandRows || []).map((b) => ({
             id: b.id,
             label: b.label,
@@ -106,7 +116,7 @@ export default function App() {
 
         const { data: stackRow } = await supabase
           .from("user_stacks")
-          .select("data")
+          .select("data, age")
           .eq("user_id", session.user.id)
           .maybeSingle();
 
@@ -121,6 +131,7 @@ export default function App() {
             }))
           );
         }
+        if (stackRow?.age != null) setAge(String(stackRow.age));
         setSyncStatus("synced");
       } catch (err) {
         console.error("Supabase load failed, using local data:", err);
@@ -136,16 +147,18 @@ export default function App() {
     if (!supabase || !userId || !loaded) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      const payload = supplements.map(({ name, cap, rows }) => ({
+      const payload = supplements.map(({ name, cap, rows, locked }) => ({
         name,
         cap,
+        locked,
         rows: rows.map(({ nutrientId, amount }) => ({ nutrientId, amount })),
       }));
-      const { error } = await supabase.from("user_stacks").upsert({ user_id: userId, data: payload, updated_at: new Date().toISOString() });
+      const ageValue = age.trim() !== "" && !isNaN(parseInt(age, 10)) ? parseInt(age, 10) : null;
+      const { error } = await supabase.from("user_stacks").upsert({ user_id: userId, data: payload, age: ageValue, updated_at: new Date().toISOString() });
       setSyncStatus(error ? "error" : "synced");
     }, 800);
     return () => clearTimeout(saveTimer.current);
-  }, [supplements, userId, loaded]);
+  }, [supplements, age, userId, loaded]);
 
   function updateSupplement(id, patch) {
     setSupplements((s) => s.map((sup) => (sup.id === id ? { ...sup, ...patch } : sup)));
@@ -168,10 +181,15 @@ export default function App() {
   function applyBrand(supId, brand) {
     setSupplements((s) =>
       s.map((sup) =>
-        sup.id !== supId ? sup : { ...sup, name: brand.label, rows: brand.items.map((it) => ({ id: newId(), nutrientId: it.nutrientId, amount: String(it.amount) })), brandQuery: "" }
+        sup.id !== supId
+          ? sup
+          : { ...sup, name: brand.label, rows: brand.items.map((it) => ({ id: newId(), nutrientId: it.nutrientId, amount: String(it.amount) })), brandQuery: "", locked: true }
       )
     );
     addSearchHistory(brand.label).then(refreshHistory);
+  }
+  function unlockForEditing(supId) {
+    updateSupplement(supId, { locked: false });
   }
 
   function attachSubmissionPhoto(supId, file) {
@@ -305,11 +323,42 @@ export default function App() {
             {syncStatus === "synced" ? "Synced" : syncStatus === "connecting" ? "Connecting…" : syncStatus === "error" ? "Offline (local only)" : "Local only"}
           </div>
         </div>
-        <h1 className="slab" style={{ color: "#F4EFE1", fontSize: 42, fontWeight: 700, lineHeight: 1.05, marginBottom: 12 }}>Stack Check</h1>
-        <p style={{ color: "#A9AFA6", fontSize: 15, maxWidth: 500, lineHeight: 1.5, marginBottom: 40 }}>
+        <h1 className="slab" style={{ color: "#F4EFE1", fontSize: 42, fontWeight: 700, lineHeight: 1.05, marginBottom: 6 }}>Stack Check</h1>
+        <p className="slab" style={{ color: "#E8A33D", fontSize: 16, fontStyle: "italic", marginBottom: 16 }}>
+          Know your stack. Before you take it.
+        </p>
+        <p style={{ color: "#A9AFA6", fontSize: 15, maxWidth: 500, lineHeight: 1.5, marginBottom: 20 }}>
           Read every bottle in your cabinet at once. Search a brand, scan a label, or type it in
           — then see where ingredients overlap or clash before your body finds out for you.
         </p>
+
+        <div style={{ background: "rgba(244,239,225,0.06)", border: "1px solid rgba(244,239,225,0.15)", borderRadius: 10, padding: "14px 18px", marginBottom: 40, maxWidth: 500 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <label className="mono" htmlFor="age-input" style={{ fontSize: 12, color: "#C9CFC6", letterSpacing: 0.5 }}>
+              Your age (optional):
+            </label>
+            <input
+              id="age-input"
+              type="number"
+              min="0"
+              max="120"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="—"
+              className="mono"
+              style={{ width: 60, background: "#F4EFE1", border: "none", borderRadius: 5, padding: "5px 8px", fontSize: 13, color: "#1C2321" }}
+            />
+          </div>
+          <p style={{ fontSize: 12, color: "#8A9088", lineHeight: 1.6, margin: 0 }}>
+            This only adjusts calcium's safety threshold (it drops from 2,500mg to 2,000mg at 51+)
+            — that's currently the one nutrient here with an established age-based change for
+            adults. These are general population reference values, not personalized medical
+            guidance, and don't account for pregnancy, breastfeeding, kidney or liver function,
+            medications, or other health conditions. Check with a pharmacist or doctor before
+            changing your supplement routine, especially if you're managing a health condition or
+            taking prescription medication.
+          </p>
+        </div>
 
         {/* Supplement label cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -330,10 +379,10 @@ export default function App() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", gap: 8, marginBottom: 14, position: "relative" }}>
-                  <div style={{ flex: 1, position: "relative" }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 14, position: "relative", flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 160px", minWidth: 0, position: "relative" }}>
                     <Search size={13} color="#8A8478" style={{ position: "absolute", left: 10, top: 10 }} />
-                    <input value={sup.brandQuery} onChange={(e) => updateSupplement(sup.id, { brandQuery: e.target.value })} placeholder="Search a brand to autofill…" style={{ width: "100%", background: "#fff", border: "1px solid rgba(28,35,33,0.15)", borderRadius: 6, padding: "8px 10px 8px 30px", fontSize: 13, color: "#1C2321" }} />
+                    <input value={sup.brandQuery} onChange={(e) => updateSupplement(sup.id, { brandQuery: e.target.value })} placeholder="Search a brand to autofill…" style={{ width: "100%", boxSizing: "border-box", background: "#fff", border: "1px solid rgba(28,35,33,0.15)", borderRadius: 6, padding: "8px 10px 8px 30px", fontSize: 13, color: "#1C2321" }} />
                     {matches.length > 0 && (
                       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid rgba(28,35,33,0.15)", borderRadius: 6, marginTop: 4, zIndex: 10, boxShadow: "0 6px 16px rgba(0,0,0,0.15)" }}>
                         {matches.map((b) => (
@@ -345,7 +394,7 @@ export default function App() {
                     )}
                   </div>
                   <input ref={(el) => (fileInputRefs.current[sup.id] = el)} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => { const file = e.target.files?.[0]; if (file) scanLabel(sup.id, file); e.target.value = ""; }} />
-                  <button onClick={() => fileInputRefs.current[sup.id]?.click()} disabled={sup.ocr.status === "loading"} className="mono" style={{ display: "flex", alignItems: "center", gap: 6, background: "#1C2321", color: "#F4EFE1", border: "none", borderRadius: 6, padding: "0 12px", fontSize: 12, cursor: "pointer" }}>
+                  <button onClick={() => fileInputRefs.current[sup.id]?.click()} disabled={sup.ocr.status === "loading"} className="mono" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, whiteSpace: "nowrap", background: "#1C2321", color: "#F4EFE1", border: "none", borderRadius: 6, padding: "0 12px", fontSize: 12, cursor: "pointer" }}>
                     {sup.ocr.status === "loading" ? <Loader2 size={14} className="spin" /> : <Camera size={14} />}
                     Scan
                   </button>
@@ -374,25 +423,38 @@ export default function App() {
                 {sup.ocr.status === "done" && <div style={{ display: "flex", gap: 6, alignItems: "flex-start", fontSize: 12, color: "#5C7A58", marginBottom: 12 }}><CheckCircle2 size={13} style={{ marginTop: 1, flexShrink: 0 }} />Filled in from your photo — double-check the amounts against the label.</div>}
 
                 <div className="perforation" style={{ paddingTop: 14 }}>
-                  <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, color: "#8A8478", marginBottom: 8 }}>ACTIVE INGREDIENTS</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, color: "#8A8478" }}>ACTIVE INGREDIENTS</div>
+                    {sup.locked && (
+                      <button
+                        onClick={() => unlockForEditing(sup.id)}
+                        className="mono"
+                        style={{ fontSize: 10, letterSpacing: 0.5, color: "#6E8FA6", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                      >
+                        <Lock size={11} /> Locked from brand — edit manually
+                      </button>
+                    )}
+                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {sup.rows.map((row) => (
                       <div key={row.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                        <select value={row.nutrientId} onChange={(e) => updateRow(sup.id, row.id, { nutrientId: e.target.value })} style={{ flex: 1, minWidth: 140, background: "#fff", border: "1px solid rgba(28,35,33,0.15)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "#1C2321" }}>
+                        <select disabled={sup.locked} value={row.nutrientId} onChange={(e) => updateRow(sup.id, row.id, { nutrientId: e.target.value })} style={{ flex: 1, minWidth: 140, background: sup.locked ? "#EDE8D8" : "#fff", color: sup.locked ? "#8A8478" : "#1C2321", border: "1px solid rgba(28,35,33,0.15)", borderRadius: 6, padding: "8px 10px", fontSize: 14 }}>
                           {nutrients.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
                         </select>
-                        <input type="number" min="0" value={row.amount} onChange={(e) => updateRow(sup.id, row.id, { amount: e.target.value })} placeholder="0" className="mono" style={{ width: 76, background: "#fff", border: "1px solid rgba(28,35,33,0.15)", borderRadius: 6, padding: "8px 8px", fontSize: 14, color: "#1C2321" }} />
+                        <input disabled={sup.locked} type="number" min="0" value={row.amount} onChange={(e) => updateRow(sup.id, row.id, { amount: e.target.value })} placeholder="0" className="mono" style={{ width: 76, background: sup.locked ? "#EDE8D8" : "#fff", color: sup.locked ? "#8A8478" : "#1C2321", border: "1px solid rgba(28,35,33,0.15)", borderRadius: 6, padding: "8px 8px", fontSize: 14 }} />
                         <span className="mono" style={{ fontSize: 12, color: "#8A8478", width: 30 }}>{nutrientMeta(row.nutrientId)?.unit}</span>
                         <span className="mono" title={nutrientMeta(row.nutrientId)?.reason} style={{ fontSize: 10, letterSpacing: 0.3, padding: "4px 7px", borderRadius: 5, color: "#fff", background: TIMING[nutrientMeta(row.nutrientId)?.timing]?.color, whiteSpace: "nowrap" }}>
                           {TIMING[nutrientMeta(row.nutrientId)?.timing]?.label}
                         </span>
-                        {sup.rows.length > 1 && <button onClick={() => removeRow(sup.id, row.id)} aria-label="Remove ingredient" style={{ background: "none", border: "none", cursor: "pointer", color: "#8A8478" }}><X size={15} /></button>}
+                        {!sup.locked && sup.rows.length > 1 && <button onClick={() => removeRow(sup.id, row.id)} aria-label="Remove ingredient" style={{ background: "none", border: "none", cursor: "pointer", color: "#8A8478" }}><X size={15} /></button>}
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => addRow(sup.id)} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#1C2321", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: 0.75 }}>
-                    <Plus size={14} /> Add ingredient
-                  </button>
+                  {!sup.locked && (
+                    <button onClick={() => addRow(sup.id)} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#1C2321", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: 0.75 }}>
+                      <Plus size={14} /> Add ingredient
+                    </button>
+                  )}
 
                   {supabase && (
                     <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px dashed rgba(28,35,33,0.15)" }}>
@@ -471,12 +533,13 @@ export default function App() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {flagged.map(([nutrientId, data]) => {
                 const meta = nutrientMeta(nutrientId);
-                const isOver = meta?.ul != null && data.total > meta.ul;
+                const ul = effectiveUL(meta);
+                const isOver = ul != null && data.total > ul;
                 return (
                   <div key={nutrientId} style={{ background: "#F4EFE1", borderRadius: 10, padding: "16px 20px", borderLeft: `5px solid ${isOver ? "#C1543C" : "#E8A33D"}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
                       <span className="slab" style={{ fontSize: 17, fontWeight: 700, color: "#1C2321" }}>{meta.name}</span>
-                      <span className="mono" style={{ fontSize: 14, color: "#1C2321" }}>{data.total.toLocaleString()} {meta.unit}{meta.ul != null && <span style={{ color: "#8A8478" }}> / {meta.ul.toLocaleString()} UL</span>}</span>
+                      <span className="mono" style={{ fontSize: 14, color: "#1C2321" }}>{data.total.toLocaleString()} {meta.unit}{ul != null && <span style={{ color: "#8A8478" }}> / {ul.toLocaleString()} UL</span>}</span>
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: isOver ? 8 : 0 }}>
                       {data.sources.map((src, i) => (
@@ -486,7 +549,7 @@ export default function App() {
                         </span>
                       ))}
                     </div>
-                    {isOver && <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#C1543C", fontSize: 13, fontWeight: 600 }}><AlertTriangle size={14} /> Combined total exceeds the tolerable upper limit</div>}
+                    {isOver && <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#C1543C", fontSize: 13, fontWeight: 600 }}><AlertTriangle size={14} /> Worth a closer look — combined total is above the typical upper limit</div>}
                   </div>
                 );
               })}

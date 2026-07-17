@@ -29,6 +29,8 @@ stack-check-app/
 2. Once it's provisioned, open **SQL Editor** in the left sidebar → **New query**.
 3. Open `schema.sql` from this folder, paste the whole thing in, and click **Run**. This creates the `nutrients`, `brands`, `brand_items`, `interactions`, and `user_stacks` tables, sets up Row Level Security, and seeds the reference data.
 3b. Open a **New query** again, paste in `migration_2_submissions.sql`, and run that too. This adds brand-submission moderation (a `status` column so new user-submitted brands start as `pending` and only show up in search once you approve them) and a `brand-photos` Storage bucket for optional packaging photos.
+3c. Run `migration_3_admin.sql` the same way. This adds the database functions the admin catalog page (step 5 below) needs to see and manage every brand, not just your own.
+3d. Run `migration_4_age.sql` too. This adds an optional age field so the app can apply the correct calcium safety threshold (2,500mg under 51, 2,000mg at 51+) — the one nutrient here with an established age-based change for adults.
 4. Go to **Authentication → Providers** (or **Authentication → Settings**, depending on your Supabase version) and make sure **Anonymous sign-ins** is enabled. The app uses this so each visitor gets a stable identity to save their stack against, with no login screen.
 5. Go to **Project Settings → API**. You'll need two values from here in step 3 below:
    - **Project URL**
@@ -44,11 +46,12 @@ npm install
 cp .env.example .env
 ```
 
-Open `.env` and paste in your Project URL and anon key from step 1.5:
+Open `.env` and paste in your Project URL and anon key from step 1.5, and pick your own passcode for the admin page:
 
 ```
 VITE_SUPABASE_URL=https://abcdefgh.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+VITE_ADMIN_CODE=pick-anything-you'll-remember
 ```
 
 Then:
@@ -101,19 +104,46 @@ generic icon.
 
 When someone fills in a supplement manually and taps **"Save for others,"** it's
 inserted into the `brands` table with `status = 'pending'` — it does **not**
-show up in anyone's search yet, including the submitter's, until you approve it.
+show up in anyone's search yet, including the submitter's, until it's approved.
+Use the admin catalog page below to approve, unpublish, or delete submissions.
+(You can still do this by hand in the Supabase dashboard's Table Editor if
+you'd rather — the admin page is just faster.)
 
-To review and approve:
+## Admin catalog page
 
-1. Supabase dashboard → **Table Editor → brands**
-2. Filter where `status = pending`
-3. Check the `label`, ingredient amounts (in `brand_items`), and photo
-   (`photo_path` — view it via **Storage → brand-photos**)
-4. Edit the row and change `status` to `approved` (or delete it if it's junk/a duplicate)
+Visit your deployed site with `?admin` on the end of the URL, e.g.
+`https://your-app.vercel.app/?admin`, and enter the passcode you set as
+`VITE_ADMIN_CODE`. From there you can:
 
-There's no in-app moderation queue yet — this is a manual dashboard step for
-now, which is fine at low volume. Worth building an in-app admin view once
-submissions pick up.
+- See every brand — approved and pending — with its full ingredient
+  breakdown and packaging photo (if one was attached)
+- **Approve** a pending submission so it shows up in everyone's brand search,
+  or **Unpublish** an approved one to hide it again
+- **Delete** a brand entirely (removes its ingredient rows too)
+- **Add a brand directly** — skips the pending queue entirely, goes straight
+  in as approved. Useful for your own household's regular supplements.
+
+Don't forget to set `VITE_ADMIN_CODE` as an environment variable in Vercel
+too (**Project Settings → Environment Variables**), the same way you did for
+the Supabase keys — otherwise the admin page will refuse to unlock.
+
+**On the security model here:** the passcode is a simple app-level gate, not
+real authentication — anyone with the code (and the exact URL) can approve,
+delete, or add brands. That's a reasonable tradeoff for a personal-use app
+with a handful of people you trust, but it isn't meant to withstand someone
+actively trying to break in. If this ever gets wider use, worth replacing
+with real Supabase auth (email/password or magic link) and an `is_admin`
+flag checked server-side instead of a shared passcode.
+
+## Age-adjusted calcium limit
+
+There's an optional "Your age" field near the top of the app. It affects
+exactly one thing: calcium's upper limit drops from 2,500mg to 2,000mg at
+age 51+, per NIH reference data. That's the only nutrient in this list with
+an established age-based change across the adult range — the others don't
+shift within adulthood, so no other values change based on age. Leaving it
+blank just uses the standard adult limit for everyone. The in-app copy spells
+this scope out explicitly so it doesn't look more personalized than it is.
 
 ## Local search history
 

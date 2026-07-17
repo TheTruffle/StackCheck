@@ -18,7 +18,7 @@ export const FALLBACK_NUTRIENTS = [
   { id: "folate", name: "Folate", unit: "mcg", ul: 1000, timing: "either", reason: "Water-soluble; absorbed well with or without food.", synonyms: ["folate", "folic acid"] },
   { id: "b12", name: "Vitamin B12", unit: "mcg", ul: null, timing: "empty_stomach", reason: "Absorption is somewhat better on an empty stomach, though it's still fine with food.", synonyms: ["vitamin b12", "cobalamin", "cyanocobalamin", "methylcobalamin"] },
   { id: "biotin", name: "Biotin", unit: "mcg", ul: null, timing: "either", reason: "Water-soluble; timing relative to food doesn't matter much.", synonyms: ["biotin"] },
-  { id: "calcium", name: "Calcium", unit: "mg", ul: 2500, timing: "with_meal", reason: "Stomach acid from eating helps absorb it; also best split from iron and zinc doses.", synonyms: ["calcium"] },
+  { id: "calcium", name: "Calcium", unit: "mg", ul: 2500, ulOver50: 2000, timing: "with_meal", reason: "Stomach acid from eating helps absorb it; also best split from iron and zinc doses.", synonyms: ["calcium"] },
   { id: "iron", name: "Iron", unit: "mg", ul: 45, timing: "empty_stomach", reason: "Absorbs best without food, but take with a little food if it upsets your stomach — just avoid calcium, coffee, or tea nearby.", synonyms: ["iron", "ferrous"] },
   { id: "magnesium", name: "Magnesium", unit: "mg", ul: 350, timing: "with_meal", reason: "Food reduces the loose-stool effect it can have on an empty stomach.", synonyms: ["magnesium"] },
   { id: "zinc", name: "Zinc", unit: "mg", ul: 40, timing: "with_meal", reason: "Can cause nausea on an empty stomach; also competes with calcium and iron for absorption.", synonyms: ["zinc"] },
